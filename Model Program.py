@@ -4,11 +4,18 @@ class CreateField():
     def __init__(self, name, x, y):
         self.name = name + ":"
         background.create_text(padX + x, padY + y - 3, text=self.name, font="Neoteric 15", fill="#9ababc", anchor=NW)
-        self.entry = Entry(background, bg="#2f3136", fg="#9ababc", insertbackground="white")
+        self.entry = Entry(background, bg="#2f3136", fg="#9ababc", insertbackground="white", insertborderwidth=1)
         background.create_window(padX + x + 130, padY + y, window=self.entry, anchor=NW)
 
     def getValue(self):
         return self.entry.get()
+
+class CreateButton():
+    def __init__(self, x, y, sizeX, sizeY, text, color, textColor, font, function):
+        self.buttonBG = background.create_rectangle(x, y, x + sizeX, y + sizeY, fill=color)
+        self.buttonText = background.create_text(x + sizeX/2, y + sizeY/2, text=text, fill=textColor, font=font)
+        background.tag_bind(self.buttonBG, "<Button-1>", lambda x: function())
+        background.tag_bind(self.buttonText, "<Button-1>", lambda x: function())
 
 class Block():
     def __init__(self, root):
@@ -19,12 +26,10 @@ class Block():
         self.modelNameEntry = CreateField("Model Name", 10, 50)
         self.textureNameEntry = CreateField("Texture Name", 10, 80)
 
-        self.button = Button(background, text="Test", command=lambda: self.printEntry())
-        background.create_window(400, 400, window=self.button)
+        
 
     def printEntry(self):
-        if(self.modelNameEntry.getValue() == "stone"):
-            print("Is stone!!y")
+        print(self.modelNameEntry.getValue())
 
 class Item():
     def __init__(self, root):
