@@ -2,8 +2,45 @@ from tkinter import *
 from json import *
 from tkinter.filedialog import askdirectory
 import os, errno
-import platform
+import threading, time
 
+# Creates an error that the user can see when they've done something wrong
+# Comes in as a red box, with a smooth transition, in and out
+class CreateError():
+    def __init__(self, text, stayTime=5):
+        self.move = 0
+        self.moveAmount = padY / 2 + 1
+        self.stayTime = stayTime
+
+        background.itemconfig(errorText, text=text, font="Neoteric 11 bold")
+        self.errorIn()
+
+    def errorIn(self):
+        if (self.move < self.moveAmount):
+            background.after(4, self.errorIn)
+            background.move(errorBG, 0, -1)
+            background.move(errorText, 0, -1)
+        else:
+            self.move = 0
+            threading._start_new_thread(self.timer, ())
+            return
+        self.move += 1
+
+    def timer(self):
+        time.sleep(self.stayTime)
+        self.errorOut()
+
+    def errorOut(self):
+        if (self.move < self.moveAmount):
+            background.after(4, self.errorOut)
+            background.move(errorBG, 0, 1)
+            background.move(errorText, 0, 1)
+        else:
+            self.move = 0
+            return
+        self.move += 1
+
+# Useful classes to easily create Tkinter widgets on a canvas
 class CreateCheckbox():
     def __init__(self, x, y, text, function, isChecked):
         self.isChecked = IntVar()
@@ -24,7 +61,6 @@ class CreateCheckbox():
             self.checkbox.config(state=NORMAL)
         else:
             print("Improper state provided")
-
 class CreateField():
     def __init__(self, x, y, name, state=True, defaultText="", charWidth=20, distance=130):
         self.name = name + ":"
@@ -52,7 +88,6 @@ class CreateField():
             background.itemconfig(self.text, fill="#9ababc")
         else:
             print("Improper state provided")
-
 class CreateButton():
     color = "#ffffff"
 
@@ -86,6 +121,7 @@ class CreateButton():
         elif (event.type == EventType.ButtonRelease):
             background.itemconfig(self.buttonBG, fill="#202225")
 
+# Holds all classes and widgets specifically created for the Block section of the generator
 class Block():
     def __init__(self, root):
         ### Seperators and borders ###
@@ -118,21 +154,17 @@ class Block():
         self.frameSpeed = CreateField(padX + 615, padY + 155, "Frame Speed", False)
 
         ### Checkboxes ###
-        self.isAnimation = CreateCheckbox(padX + 310, padY + 5, "Is Animation", self.printEntry, False)
-        self.genItemBlock = CreateCheckbox(padX + 310, padY + 30, "Generate ItemBlock", self.printEntry, True)
+        self.isAnimation = CreateCheckbox(padX + 310, padY + 5, "Is Animation", self.passFunc, False)
+        self.genItemBlock = CreateCheckbox(padX + 310, padY + 30, "Generate ItemBlock", self.passFunc, True)
         self.differentSided = CreateCheckbox(padX + 310, padY + 55, "Is model differently sided", self.toggleSideEntries, False)
 
         self.interpolate = CreateCheckbox(padX + 615, padY + 15, "Interpolate", self.passFunc, False)
         self.customSpeed = CreateCheckbox(padX + 615, padY + 95, "Custom Frame Speeds", self.toggleFrameEntries, False)
-        self.blur = CreateCheckbox(padX + 615, padY + 185, "Blur", self.toggleFrameEntries, False)
-        self.clamp = CreateCheckbox(padX + 615, padY + 210, "Clamp", self.toggleFrameEntries, False)
+        self.blur = CreateCheckbox(padX + 615, padY + 185, "Blur", self.passFunc, False)
+        self.clamp = CreateCheckbox(padX + 615, padY + 210, "Clamp", self.passFunc, False)
 
         ### Buttons ###
         self.button = CreateButton(padX + 45, padY + height - 100, 200, 75, "GENERATE!", "#3d4046", "#9ababc", "Neoteric 30", self.generate)
-
-    def printEntry(self):
-        print("Function run")
-        pass
 
     def passFunc(self):
         pass
@@ -300,6 +332,7 @@ class Block():
             if e.errno != errno.EEXIST:
                 raise
 
+# Holds all classes and widgets specifically created for the Item section of the generator
 class Item():
     def __init__(self, root):
         startX = padX
@@ -332,10 +365,8 @@ background.pack()
 background.create_text(mainWidth / 2, padY / 2, text="MINECRAFT MODEL GENERATOR", font="Neoteric 30", fill="#9ababc", anchor=CENTER)
 
 # Create error bar
-errorBG = background.create_rectangle(0, mainHeight - 1, mainWidth - 1, mainHeight - padY / 2, fill="#9d1c1c")
-errorText = background.create_text(mainWidth / 2, mainHeight - padY / 4 - 1, text="Invalid directory selected!", fill="white", font="Calibri 11")
-background.itemconfig(errorBG, state="hidden")
-background.itemconfig(errorText, state="hidden")
+errorBG = background.create_rectangle(0, mainHeight - 1, mainWidth - 1, mainHeight + padY / 2, fill="#9d1c1c")
+errorText = background.create_text(mainWidth / 2, mainHeight + padY / 4 - 1, text="Invalid directory selected!", fill="white", font="Neoteric 11 bold")
 
 # Load Separate GUIs
 Block(root)
