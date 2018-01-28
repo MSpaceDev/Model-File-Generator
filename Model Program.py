@@ -1,6 +1,7 @@
 from tkinter import *
-from tkinter.filedialog import askopenfilename
-import os
+from json import *
+from tkinter.filedialog import askdirectory
+import os, errno
 import platform
 
 class CreateCheckbox():
@@ -107,8 +108,8 @@ class Block():
         self.down = CreateField(padX + 315, padY + 120, "Down", False)
         self.north = CreateField(padX + 315, padY + 145, "North", False)
         self.south = CreateField(padX + 315, padY + 170, "South", False)
-        self.east = CreateField(padX + 315, padY + 220, "East", False)
-        self.west = CreateField(padX + 315, padY + 195, "West", False)
+        self.east = CreateField(padX + 315, padY + 195, "East", False)
+        self.west = CreateField(padX + 315, padY + 220, "West", False)
         # Animation Properties
         self.frameWidth = CreateField(padX + 615, padY + 50, "Width", True, "1", 7, 75)
         self.frameHeight = CreateField(padX + 750, padY + 50, "Height", True, "1", 7, 75)
@@ -127,17 +128,32 @@ class Block():
         self.clamp = CreateCheckbox(padX + 615, padY + 210, "Clamp", self.toggleFrameEntries, False)
 
         ### Buttons ###
-        self.button = CreateButton(padX + 45, padY + height - 100, 200, 75, "GENERATE!", "#3d4046", "#9ababc", "Neoteric 30", self.printEntry)
+        self.button = CreateButton(padX + 45, padY + height - 100, 200, 75, "GENERATE!", "#3d4046", "#9ababc", "Neoteric 30", self.generate)
 
     def printEntry(self):
         print("Function run")
         pass
-        # self.filename = askopenfilename(initialdir=os.path.expanduser("~") + "/Desktop/",
-        #                                 filetypes =(("PNG", "*.png"), ("JPEG", "*.jpg"),("All Files","*.*")),
-        #                                 title = "Choose a file")
 
     def passFunc(self):
         pass
+
+    def toggleSideEntries(self):
+        if(self.differentSided.isChecked.get() == 0):
+            self.up.setState("disabled")
+            self.down.setState("disabled")
+            self.north.setState("disabled")
+            self.south.setState("disabled")
+            self.east.setState("disabled")
+            self.west.setState("disabled")
+            self.textureNameEntry.setState("normal")
+        else:
+            self.up.setState("normal")
+            self.down.setState("normal")
+            self.north.setState("normal")
+            self.south.setState("normal")
+            self.east.setState("normal")
+            self.west.setState("normal")
+            self.textureNameEntry.setState("disabled")
 
     def toggleFrameEntries(self):
         if(self.customSpeed.isChecked.get() == 0):
@@ -149,21 +165,92 @@ class Block():
             self.frameSpeed.setState("normal")
             self.speed.setState("disabled")
 
-    def toggleSideEntries(self):
-        if(self.differentSided.isChecked.get() == 0):
-            self.up.setState("disabled")
-            self.down.setState("disabled")
-            self.north.setState("disabled")
-            self.south.setState("disabled")
-            self.east.setState("disabled")
-            self.west.setState("disabled")
+    # Generates all files based on info given
+    def generate(self):
+        self.filename = askdirectory(initialdir=os.path.expanduser("~") + "/Desktop/", title = "Please select a directory")
+        self.modelName = self.modelNameEntry.getValue()
+
+        if (self.modNameEntry.getValue() == ""):
+            self.texturePath = "blocks/"
+            self.modelPath = "block/"
+            self.namespace = "minecraft/"
         else:
-            self.up.setState("normal")
-            self.down.setState("normal")
-            self.north.setState("normal")
-            self.south.setState("normal")
-            self.east.setState("normal")
-            self.west.setState("normal")
+            self.texturePath = self.modNameEntry.getValue() + ":blocks/"
+            self.modelPath = self.modNameEntry.getValue() + ":block/"
+            self.namespace = self.modNameEntry.getValue() + "/"
+
+        blockDir = self.filename + "/assets/" + self.namespace + "model/block/"
+        itemDir = self.filename + "/assets/" + self.namespace + "model/item/"
+        blockstateDir = self.filename + "/assets/" + self.namespace + "blockstates/"
+        textureDir = self.filename + "/assets/" + self.namespace + "textures/blocks/"
+
+        self.createDir(blockDir)
+        self.createDir(itemDir)
+        self.createDir(blockstateDir)
+        if (self.isAnimation.isChecked.get() == 1):
+            self.createDir(textureDir)
+
+        # Creates block model file
+        with open(str(blockDir + self.modelName + ".json"), "w+") as model:
+            json = {}
+
+            if(self.differentSided.isChecked.get() == 0):
+                json.update(
+                    {
+                        "parent": "cube_all",
+                        "textures": {
+                            "all": self.texturePath + self.textureNameEntry.getValue()
+                        }
+                    }
+                )
+            else:
+                json.update(
+                    {
+                        "parent": "cube",
+                        "textures": {
+                            "particle": self.texturePath + self.up.getValue(),
+                            "up": self.texturePath + self.up.getValue(),
+                            "down": self.texturePath + self.down.getValue(),
+                            "north": self.texturePath + self.north.getValue(),
+                            "south": self.texturePath + self.south.getValue(),
+                            "east": self.texturePath + self.east.getValue(),
+                            "west": self.texturePath + self.west.getValue()
+                        }
+                    }
+                )
+
+            model.write(dumps(json, indent=4))
+
+        # Creates blockstate file
+        with open(str(blockstateDir + self.modelName + ".json"), "w+") as blockstate:
+                json = {}
+
+                json.update(
+                    {
+                        "variants": {
+                            "normal": {
+                                "model": self.modelPath + self.modelName
+                            }
+                        }
+                    }
+                )
+
+                blockstate.write(dumps(json, indent=4))
+
+        # Creates MCMETA
+        if(self.isAnimation.isChecked.get() == 1):
+            with open(str(textureDir + self.textureNameEntry.getValue() + ".png.mcmeta"), "w+") as mcmeta:
+                json = {}
+                mcmeta.write(dumps(json, indent=4))
+
+        exit(code=0)
+
+    def createDir(self, directory):
+        try:
+            os.makedirs(os.path.dirname(directory))
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
 
 class Item():
     def __init__(self, root):
@@ -171,7 +258,6 @@ class Item():
         startY = padY*2 + height
         background.create_rectangle(startX, startY, padX + length, padY*2 + height*2, fill="#36393e", width=1)
         background.create_text(startX + 10, startY, text="Item Generator", font="Neoteric 20", fill="#808387", anchor=NW)
-
 
 # Main Program
 root = Tk()
@@ -196,6 +282,12 @@ length = mainWidth - padX*2
 background = Canvas(root, width=mainWidth, height=mainHeight, highlightthickness=0, bg="#2f3136")
 background.pack()
 background.create_text(mainWidth / 2, padY / 2, text="MINECRAFT MODEL GENERATOR", font="Neoteric 30", fill="#9ababc", anchor=CENTER)
+
+# Create error bar
+errorBG = background.create_rectangle(0, mainHeight - 1, mainWidth - 1, mainHeight - padY / 2, fill="#9d1c1c")
+errorText = background.create_text(mainWidth / 2, mainHeight - padY / 4 - 1, text="Invalid directory selected!", fill="white", font="Calibri 11")
+background.itemconfig(errorBG, state="hidden")
+background.itemconfig(errorText, state="hidden")
 
 # Load Separate GUIs
 Block(root)
