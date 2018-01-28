@@ -159,16 +159,15 @@ class Block():
         if(self.customSpeed.isChecked.get() == 0):
             self.frameIndex.setState("disabled")
             self.frameSpeed.setState("disabled")
-            self.speed.setState("normal")
         else:
             self.frameIndex.setState("normal")
             self.frameSpeed.setState("normal")
-            self.speed.setState("disabled")
 
     # Generates all files based on info given
     def generate(self):
         self.filename = askdirectory(initialdir=os.path.expanduser("~") + "/Desktop/", title = "Please select a directory")
         self.modelName = self.modelNameEntry.getValue()
+        self.createMCMeta = False
 
         if (self.modNameEntry.getValue() == ""):
             self.texturePath = "blocks/"
@@ -187,8 +186,9 @@ class Block():
         self.createDir(blockDir)
         self.createDir(itemDir)
         self.createDir(blockstateDir)
-        if (self.isAnimation.isChecked.get() == 1):
+        if (self.blur.isChecked.get() == 1 or self.clamp.isChecked.get() == 1 or self.isAnimation.isChecked.get() == 1):
             self.createDir(textureDir)
+            self.createMCMeta = True
 
         # Creates block model file
         with open(str(blockDir + self.modelName + ".json"), "w+") as model:
@@ -238,12 +238,60 @@ class Block():
                 blockstate.write(dumps(json, indent=4))
 
         # Creates MCMETA
-        if(self.isAnimation.isChecked.get() == 1):
+        if(self.createMCMeta):
             with open(str(textureDir + self.textureNameEntry.getValue() + ".png.mcmeta"), "w+") as mcmeta:
                 json = {}
+
+                # Generate Animation section of MCMETA
+                if (self.isAnimation.isChecked.get() == 1):
+                    animation = {
+                            "interpolate": bool(self.interpolate.isChecked.get()),
+                            "width": self.frameWidth.getValue(),
+                            "height": self.frameHeight. getValue()
+                    }
+
+                    if(self.customSpeed.isChecked.get() == 1):
+                        frames = []
+                        frameIndex = self.sortFrameIndex(self.frameIndex.getValue())
+                        frameSpeed = self.sortFrameIndex(self.frameSpeed.getValue())
+
+                        i = 0
+                        for index in frameIndex:
+                            try:
+                                speed = int(frameSpeed[i])
+                                frames.append({ "index": int(index), "speed": speed })
+                            except IndexError:
+                                frames.append({ "index": int(index) })
+                            i += 1
+
+                        animation.update({"frametime": int(self.speed.getValue())})
+                        animation.update({"frames": frames})
+                    else:
+                        animation.update({"frametime": int(self.speed.getValue())})
+
+                    json.update({"animation": animation})
+
+                # Generate texture section of MCMETA
+                texture = {}
+                if (self.blur.isChecked.get() == 1):
+                    texture.update({"blur": bool(self.blur.isChecked.get())})
+
+                if (self.clamp.isChecked.get() == 1):
+                    texture.update({"clamp": bool(self.clamp.isChecked.get())})
+
+                if(texture):
+                    json.update({"texture": texture})
+
                 mcmeta.write(dumps(json, indent=4))
 
         exit(code=0)
+
+    def sortFrameIndex(self, string):
+        s = str(string)
+        s = "".join(s.split())
+        s = s.split(",")
+
+        return s
 
     def createDir(self, directory):
         try:
